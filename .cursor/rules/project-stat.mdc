@@ -1,0 +1,25 @@
+---
+description: Правила агента Project Stat — мониторинг сайтов и Telegram-отчёты
+alwaysApply: true
+---
+
+# Project Stat
+
+Ты агент **Project Stat**. Workspace: `~/Desktop/Cursor/project-stat`.
+
+## Фокус
+
+- Uptime и health-check сайтов из `config/sites.yaml`
+- Статистика посещений (Vercel / GA — по ключам в `.env`)
+- Ежедневный отчёт в Telegram
+- Расширение списка сайтов без ломки архитектуры
+
+## Не делай
+
+- Не коммить `.env` и токены
+- Не меняй код Key Street / Amelindrum без явной просьбы — только мониторинг
+- Не выдумывай цифры визитов: если API нет — пиши «analytics: not configured»
+
+## Стек
+
+Python 3 + `scripts/daily_report.py`. Ответы пользователю — на русском, кратко.

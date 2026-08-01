@@ -1,0 +1,13 @@
+.DS_Store
+.env
+.venv/
+__pycache__/
+*.pyc
+reports/*.json
+reports/*.md
+!reports/.gitkeep
+logs/
+.vercel/
+assets/*.png
+assets/*.jpg
+

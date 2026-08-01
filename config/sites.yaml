@@ -1,0 +1,30 @@
+# Сайты под мониторинг Project Stat.
+# Добавляйте новые блоки без изменения кода.
+
+defaults:
+  timeout_sec: 15
+  slow_ms: 3000
+  timezone: Europe/Moscow
+
+sites:
+  - id: key-street
+    name: Key Street
+    url: https://keystreet-site.vercel.app
+    vercel_project: prj_YnE48jThu3yUjOi0OsoiZqvX4d6S
+    checks:
+      - path: /
+        expect_status: [200, 301, 302]
+      - url: https://keystreet.ru/
+        expect_status: [200, 301, 302]
+      # - path: /about
+      #   expect_status: [200]
+
+  - id: amelindrum
+    name: Amelindrum
+    url: https://amelindrum.vercel.app
+    vercel_project: prj_xrkc4U3LNPMP33fIgptyvjTRvefW
+    checks:
+      - path: /
+        expect_status: [200, 301, 302]
+      - path: /admin
+        expect_status: [200, 301, 302, 401, 403]
