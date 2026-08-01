@@ -1,6 +1,6 @@
 /**
- * Telegram webhook → ack in chat → trigger GitHub Actions report.
- * Heavy work (health + analytics + Telegram send) runs in Actions (no Mac/VPN).
+ * Telegram webhook (Vercel) — cloud bot, no Mac/VPN.
+ * Ack → run /api/report → report lands in the same chat.
  */
 module.exports = async function handler(req, res) {
   if (req.method === "GET") {
@@ -14,8 +14,7 @@ module.exports = async function handler(req, res) {
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const allowedChatId = String(process.env.TELEGRAM_CHAT_ID || "");
-  const ghPat = process.env.GH_PAT;
-  const ghRepo = process.env.GH_REPO || "Keystreet-records/project-stat";
+  const cronSecret = process.env.CRON_SECRET || "";
 
   if (!token || !allowedChatId) {
     res.status(500).json({ ok: false, error: "telegram env missing" });
@@ -79,34 +78,47 @@ module.exports = async function handler(req, res) {
   if (isReport) {
     await tg(token, "sendMessage", {
       chat_id: chatId,
-      text: "⏳ Собираю отчёт в облаке… пришлю сюда через минуту.",
+      text: "⏳ Собираю отчёт в облаке…",
       reply_markup: reportKeyboard(),
       disable_web_page_preview: true,
     });
 
-    if (!ghPat) {
-      await tg(token, "sendMessage", {
-        chat_id: chatId,
-        text: "Ошибка конфигурации: нет GH_PAT для запуска отчёта.",
-        reply_markup: reportKeyboard(),
-      });
-      res.status(200).json({ ok: false, error: "GH_PAT missing" });
-      return;
-    }
+    const base =
+      process.env.REPORT_BASE_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
 
-    try {
-      await dispatchReport(ghPat, ghRepo);
-    } catch (err) {
+    if (!base) {
       await tg(token, "sendMessage", {
         chat_id: chatId,
-        text: `Не удалось запустить облачный отчёт: ${String(err.message || err)}`,
+        text: "Ошибка: REPORT_BASE_URL / VERCEL_URL не задан.",
         reply_markup: reportKeyboard(),
       });
       res.status(200).json({ ok: false });
       return;
     }
 
-    res.status(200).json({ ok: true, dispatched: true });
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (cronSecret) headers.Authorization = `Bearer ${cronSecret}`;
+      const r = await fetch(`${base}/api/report`, {
+        method: "POST",
+        headers,
+      });
+      if (!r.ok) {
+        const t = await r.text();
+        throw new Error(`${r.status} ${t.slice(0, 180)}`);
+      }
+    } catch (err) {
+      await tg(token, "sendMessage", {
+        chat_id: chatId,
+        text: `Не удалось собрать отчёт: ${String(err.message || err)}`,
+        reply_markup: reportKeyboard(),
+      });
+      res.status(200).json({ ok: false });
+      return;
+    }
+
+    res.status(200).json({ ok: true });
     return;
   }
 
@@ -132,25 +144,4 @@ async function tg(token, method, body) {
     throw new Error(`Telegram ${method}: ${r.status} ${t.slice(0, 200)}`);
   }
   return r.json();
-}
-
-async function dispatchReport(pat, repo) {
-  const url = `https://api.github.com/repos/${repo}/dispatches`;
-  const r = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${pat}`,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      event_type: "telegram-report",
-      client_payload: { source: "telegram" },
-    }),
-  });
-  if (!r.ok) {
-    const t = await r.text();
-    throw new Error(`GitHub dispatch: ${r.status} ${t.slice(0, 200)}`);
-  }
 }

@@ -1,7 +1,12 @@
 {
   "functions": {
-    "api/telegram.js": {
-      "maxDuration": 30
+    "api/telegram.js": { "maxDuration": 30 },
+    "api/report.py": { "maxDuration": 60 }
+  },
+  "crons": [
+    {
+      "path": "/api/report",
+      "schedule": "0 8 * * *"
     }
-  }
+  ]
 }
