@@ -28,3 +28,7 @@ sites:
         expect_status: [200, 301, 302]
       - path: /admin
         expect_status: [200, 301, 302, 401, 403]
+      - url: https://amelindrum.ru/
+        expect_status: [200, 301, 302]
+      - url: https://amelindrum.com/
+        expect_status: [200, 301, 302]
